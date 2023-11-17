@@ -1,0 +1,89 @@
+# Based partially on Alyxia's work, thanks so much!
+
+name: Release
+on:
+  push:
+    tags:
+      - v*
+
+env:
+  FORCE_COLOR: true
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.19"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~\AppData\Local\go-build
+            ~\go\pkg\mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+
+      - name: Install Windows dependencies
+        shell: msys2 {0}
+        run: |
+          pacman -S --noconfirm git mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-go
+          export GOROOT=/mingw64/lib/go
+          export GOPATH=/mingw64
+
+      - name: Install Go dependencies
+        shell: msys2 {0}
+        run: |
+          export GOROOT=/mingw64/lib/go
+          export GOPATH=/mingw64
+          go get -v
+          go install github.com/tc-hib/go-winres@latest
+
+      - name: Build Gui
+        shell: msys2 {0}
+        run: |
+          export GOROOT=/mingw64/lib/go
+          export GOPATH=/mingw64
+          go-winres make --product-version "git-tag"
+          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -v -tags static -ldflags "-s -w -H=windowsgui -extldflags=-static -X 'main.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'main.InstallerTag=${{ github.ref_name }}'" -o ClickerGame.exe
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: ClickerGame-windows
+          path: |
+            ClickerGame.exe
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-windows]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v3
+        with:
+          name: ClickerGame-windows
+          path: windows
+
+      - name: Create the release
+        uses: softprops/action-gh-release@v0.1.15 # v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          name: ${{ github.ref_name }}
+          prerelease: false
+          draft: false
+          files: |
+            windows/ClickerGame*.exe
