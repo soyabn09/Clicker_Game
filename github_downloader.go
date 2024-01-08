@@ -7,17 +7,10 @@
 package main
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
-	"os"
-	path "path/filepath"
-	"strconv"
-	"strings"
-	"sync"
 )
 
 type GithubRelease struct {
@@ -47,7 +40,6 @@ func GetGithubRelease(url, fallbackUrl string) (*GithubRelease, error) {
 	}
 
 	req.Header.Set("User-Agent", UserAgent)
-	req.Header.Set("Authorization", Token)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {

@@ -1,5 +1,3 @@
-# Based partially on Alyxia's work, thanks so much!
-
 name: Release
 on:
   push:

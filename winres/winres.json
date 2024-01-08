@@ -19,12 +19,11 @@
 			"0000": {
 				"info": {
 					"0409": {
-						"Comments": "Comments",
 						"CompanyName": "Soyab Nandhla",
-						"FileDescription": "Clicker Game",
-						"LegalCopyright": "© 2023 Soyab Nandhla",
+						"FileDescription": "Clicker Game Version 3.0",
+						"LegalCopyright": "© 2024 Soyab Nandhla",
 						"ProductName": "Clicker Game",
-						"ProductVersion": ""
+						"ProductVersion": "3.0.0"
 					}
 				}
 			}

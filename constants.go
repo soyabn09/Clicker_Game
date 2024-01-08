@@ -18,8 +18,6 @@ const ReleaseUrlFallback = "https://cdn.soyab.uk/fallback/clickergame.json"
 
 var UserAgent = "SoyabBot " + InstallerGitHash + " (https://github.com/soyabn09/Clicker_Game)"
 
-var Token = "token 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"
-
 var ContentType = "application/octet-stream"
 
 var (
