@@ -14,7 +14,7 @@ import (
 	g "github.com/AllenDang/giu"
 )
 
-var appVersion = "3.0.0"
+var appVersion = "3.0.1"
 
 const releasesURL = "https://github.com/soyabn09/Clicker_Game/releases"
 
@@ -53,7 +53,7 @@ var (
 			ID:          "easy",
 			Name:        "EASY",
 			Seconds:     60,
-			Description: "YOU HAVE A MINUTE TO CLICK AS FAST AS YOU CAN",
+			Description: "YOU HAVE 60 SECONDS TO CLICK AS FAST AS YOU CAN",
 			Color:       green,
 		},
 		"medium": {
@@ -74,7 +74,7 @@ var (
 			ID:          "custom",
 			Name:        "CUSTOM",
 			Seconds:     60,
-			Description: "YOU CAN APPLY ANY AMOUNT OF TIME TO YOUR SELF",
+			Description: "YOU CAN APPLY ANY AMOUNT OF TIME TO YOURSELF",
 			Color:       blue,
 		},
 	}
@@ -86,7 +86,7 @@ var (
 	timeLeft      int32
 	customSeconds int32 = 60
 	running       bool
-	lastTick      time.Time
+	timerEndsAt   time.Time
 
 	modalID      int
 	modalOpen    bool
@@ -103,11 +103,21 @@ func main() {
 	if icon, _, err := image.Decode(bytes.NewReader(iconBytes)); err == nil {
 		win.SetIcon([]image.Image{icon})
 	}
+	go refreshUI()
 	win.Run(loop)
+}
+
+func refreshUI() {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for range ticker.C {
+		g.Update()
+	}
 }
 
 func loop() {
 	updateTimer()
+	ensureScoreFileAvailable()
 
 	widgets := layoutForScreen()
 	widgets = append(widgets, modal())
@@ -115,6 +125,12 @@ func loop() {
 	g.PushWindowPadding(16, 22)
 	g.SingleWindow().Layout(widgets...)
 	g.PopStyle()
+}
+
+func ensureScoreFileAvailable() {
+	if err := ensureScoresFile(); err != nil && modalID == 0 {
+		showModal("Save Error", err.Error())
+	}
 }
 
 func modal() g.Widget {
@@ -264,6 +280,9 @@ func customControls() g.Widget {
 			g.InputInt(&customSeconds).Label("##custom-seconds").Size(140),
 			g.Button("APPLY").Size(120, 32).OnClick(func() {
 				timeLeft = validateCustomSeconds(true)
+				if running {
+					timerEndsAt = time.Now().Add(time.Duration(timeLeft) * time.Second)
+				}
 				highScore = int32(getHighScore(scoreKey()))
 			}),
 		),
@@ -325,7 +344,7 @@ func click() {
 	}
 	if !running {
 		running = true
-		lastTick = time.Now()
+		timerEndsAt = time.Now().Add(time.Duration(timeLeft) * time.Second)
 	}
 	score++
 }
@@ -354,13 +373,13 @@ func updateTimer() {
 	}
 
 	now := time.Now()
-	for timeLeft > 0 && now.Sub(lastTick) >= time.Second {
-		timeLeft--
-		lastTick = lastTick.Add(time.Second)
-	}
-	if timeLeft <= 0 {
+	remaining := timerEndsAt.Sub(now)
+	if remaining <= 0 {
+		timeLeft = 0
 		finishGame()
+		return
 	}
+	timeLeft = int32((remaining + time.Second - 1) / time.Second)
 }
 
 func finishGame() {

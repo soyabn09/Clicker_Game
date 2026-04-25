@@ -8,3 +8,4 @@ ClickerGame-*
 *.tmp
 dist/
 build/
+test/

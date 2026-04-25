@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type scoreStore struct {
@@ -20,8 +20,10 @@ var (
 	scoresMu sync.Mutex
 	scores   = scoreStore{
 		Version:   1,
-		HighScore: map[string]int{"easy": 0, "medium": 0, "hard": 0, "custom": 0},
+		HighScore: defaultHighScores(),
 	}
+
+	lastScoreFileCheck time.Time
 )
 
 func loadScores() error {
@@ -38,14 +40,14 @@ func loadScores() error {
 
 	content, err := os.ReadFile(path)
 	if errors.Is(err, os.ErrNotExist) {
-		migrateOldScoresLocked()
+		scores.HighScore = defaultHighScores()
 		return saveScoresLocked()
 	}
 	if err != nil {
 		return err
 	}
 	if err := json.Unmarshal(content, &scores); err != nil {
-		migrateOldScoresLocked()
+		scores.HighScore = defaultHighScores()
 		return saveScoresLocked()
 	}
 	if scores.HighScore == nil {
@@ -53,11 +55,15 @@ func loadScores() error {
 	}
 
 	changed := false
-	for _, id := range []string{"easy", "medium", "hard", "custom"} {
+	for _, id := range []string{"easy", "medium", "hard", "custom:60"} {
 		if _, ok := scores.HighScore[id]; !ok {
 			scores.HighScore[id] = 0
 			changed = true
 		}
+	}
+	if _, ok := scores.HighScore["custom"]; ok {
+		delete(scores.HighScore, "custom")
+		changed = true
 	}
 	if scores.Version == 0 {
 		scores.Version = 1
@@ -67,6 +73,10 @@ func loadScores() error {
 		return saveScoresLocked()
 	}
 	return nil
+}
+
+func defaultHighScores() map[string]int {
+	return map[string]int{"easy": 0, "medium": 0, "hard": 0, "custom:60": 0}
 }
 
 func getHighScore(modeID string) int {
@@ -83,6 +93,28 @@ func setHighScore(modeID string, score int) error {
 		scores.HighScore = map[string]int{}
 	}
 	scores.HighScore[modeID] = score
+	return saveScoresLocked()
+}
+
+func ensureScoresFile() error {
+	scoresMu.Lock()
+	defer scoresMu.Unlock()
+
+	now := time.Now()
+	if now.Sub(lastScoreFileCheck) < time.Second {
+		return nil
+	}
+	lastScoreFileCheck = now
+
+	path, err := scoresPath()
+	if err != nil {
+		return err
+	}
+	if _, err := os.Stat(path); err == nil {
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
 	return saveScoresLocked()
 }
 
@@ -110,34 +142,6 @@ func saveScoresLocked() error {
 	return os.Rename(tmp, path)
 }
 
-func migrateOldScoresLocked() {
-	for _, modeID := range []string{"easy", "medium", "hard", "custom"} {
-		score, ok := readOldScore(modeID)
-		if !ok {
-			continue
-		}
-		key := modeID
-		if modeID == "custom" {
-			key = "custom:60"
-		}
-		if score > scores.HighScore[key] {
-			scores.HighScore[key] = score
-		}
-	}
-}
-
-func readOldScore(modeID string) (int, bool) {
-	content, err := os.ReadFile(oldScorePath(modeID))
-	if err != nil {
-		return 0, false
-	}
-	score, err := strconv.Atoi(strings.TrimSpace(string(content)))
-	if err != nil {
-		return 0, false
-	}
-	return score, true
-}
-
 func scoresPath() (string, error) {
 	if override := strings.TrimSpace(os.Getenv("CLICKER_DATA_DIR")); override != "" {
 		return filepath.Join(override, "scores.json"), nil
@@ -147,11 +151,4 @@ func scoresPath() (string, error) {
 		return "", err
 	}
 	return filepath.Join(dir, "Clicker Game", "scores.json"), nil
-}
-
-func oldScorePath(modeID string) string {
-	if runtime.GOOS == "windows" {
-		return filepath.Join(`C:\CLICKER`, strings.ToUpper(modeID)+".txt")
-	}
-	return filepath.Join(".", "CLICKER", strings.ToUpper(modeID)+".txt")
 }
