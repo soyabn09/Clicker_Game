@@ -61,7 +61,7 @@ Builds are created only by the GitHub Actions release workflow. Do not build rel
    For a prerelease build, include a suffix after the version:
 
    ```powershell
-   git tag v3.1.0-beta.1
+   git tag v3.0.0-beta.1
    ```
 
    Tags containing `-` are published as GitHub prereleases.
@@ -75,7 +75,7 @@ Builds are created only by the GitHub Actions release workflow. Do not build rel
    For a prerelease tag:
 
    ```powershell
-   git push origin v3.1.0-beta.1
+   git push origin v3.0.0-beta.1
    ```
 
 4. Open the repository on GitHub and go to **Actions**.

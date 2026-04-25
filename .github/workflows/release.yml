@@ -39,7 +39,7 @@ jobs:
           CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -v -tags static -ldflags "-s -w -H=windowsgui -extldflags=-static -X 'main.appVersion=${{ github.ref_name }}'" -o "ClickerGame-${{ github.ref_name }}-windows.exe" .
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: clicker-game-windows
           path: ClickerGame-${{ github.ref_name }}-windows.exe
@@ -66,7 +66,7 @@ jobs:
           zip -r "ClickerGame-${{ github.ref_name }}-macos.zip" ClickerGame.app
 
       - name: Upload macOS artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: clicker-game-macos
           path: ClickerGame-${{ github.ref_name }}-macos.zip
@@ -94,7 +94,7 @@ jobs:
           tar -czf "ClickerGame-${{ github.ref_name }}-linux.tar.gz" ClickerGame-${{ github.ref_name }}-linux
 
       - name: Upload Linux artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: clicker-game-linux
           path: ClickerGame-${{ github.ref_name }}-linux.tar.gz
@@ -104,23 +104,12 @@ jobs:
     needs: [build-windows, build-macos, build-linux]
 
     steps:
-      - name: Download Windows artifact
-        uses: actions/download-artifact@v3
+      - name: Download release artifacts
+        uses: actions/download-artifact@v4
         with:
-          name: clicker-game-windows
           path: dist
-
-      - name: Download macOS artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: clicker-game-macos
-          path: dist
-
-      - name: Download Linux artifact
-        uses: actions/download-artifact@v3
-        with:
-          name: clicker-game-linux
-          path: dist
+          pattern: clicker-game-*
+          merge-multiple: true
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v1
