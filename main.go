@@ -7,20 +7,17 @@ import (
 	"image"
 	"image/color"
 	_ "image/png"
-	"os/exec"
 	"strconv"
 	"time"
 
 	g "github.com/AllenDang/giu"
 )
 
-var appVersion = "3.0.1"
-
-const releasesURL = "https://github.com/soyabn09/Clicker_Game/releases"
+var appVersion = "3.0.2"
 
 const (
-	windowWidth  = 430
-	windowHeight = 330
+	windowWidth  = 450
+	windowHeight = 410
 )
 
 //go:embed winres/icon.png
@@ -31,7 +28,6 @@ type screen int
 const (
 	screenMenu screen = iota
 	screenGame
-	screenCredits
 )
 
 type gameMode struct {
@@ -166,8 +162,6 @@ func layoutForScreen() []g.Widget {
 	switch currentScreen {
 	case screenGame:
 		return gameLayout()
-	case screenCredits:
-		return creditsLayout()
 	default:
 		return menuLayout()
 	}
@@ -178,32 +172,26 @@ func menuLayout() []g.Widget {
 		g.Align(g.AlignCenter).To(
 			g.Style().SetFontSize(18).To(g.Label("MAIN MENU")),
 		),
-		g.Dummy(0, 24),
+		g.Dummy(0, 16),
 		g.Align(g.AlignCenter).To(
 			modeButton(modes["easy"], "Easy Difficulty"),
 		),
-		g.Dummy(0, 8),
+		g.Dummy(0, 3),
 		g.Align(g.AlignCenter).To(
 			modeButton(modes["medium"], "Medium Difficulty"),
 		),
-		g.Dummy(0, 8),
+		g.Dummy(0, 3),
 		g.Align(g.AlignCenter).To(
 			modeButton(modes["hard"], "Hard Difficulty"),
 		),
-		g.Dummy(0, 8),
+		g.Dummy(0, 3),
 		g.Align(g.AlignCenter).To(
 			modeButton(modes["custom"], "Custom Option"),
 		),
-		g.Dummy(0, 8),
-		g.Align(g.AlignCenter).To(
-			g.Button("CREDITS").Size(383, 28).OnClick(func() {
-				currentScreen = screenCredits
-			}),
-		),
-		g.Dummy(0, 12),
+		g.Dummy(0, 3),
 		g.Align(g.AlignCenter).To(
 			g.Row(
-				g.Label("(c) 2020 - 2026 Soyab Nandhla"),
+				g.Label("(c) 2020-2026 Soyab Nandhla"),
 				g.Dummy(54, 0),
 				g.Label("Version: "+appVersion),
 			),
@@ -230,14 +218,14 @@ func gameLayout() []g.Widget {
 		g.Dummy(0, 10),
 		g.Align(g.AlignCenter).To(
 			g.Row(
-				g.Style().SetFontSize(16).To(g.Label("Score: "+strconv.Itoa(int(score)))),
+				g.Style().SetFontSize(20).To(g.Label("Score: "+strconv.Itoa(int(score)))),
 				g.Dummy(18, 0),
-				g.Style().SetFontSize(16).To(g.Label("High Score: "+strconv.Itoa(int(highScore)))),
+				g.Style().SetFontSize(20).To(g.Label("High Score: "+strconv.Itoa(int(highScore)))),
 				g.Dummy(18, 0),
-				g.Style().SetFontSize(16).To(g.Label("Time: "+strconv.Itoa(int(timeLeft)))),
+				g.Style().SetFontSize(20).To(g.Label("Time: "+strconv.Itoa(int(timeLeft)))),
 			),
 		),
-		g.Dummy(0, 10),
+		g.Dummy(0, 20),
 		g.Align(g.AlignCenter).To(
 			g.Label(activeMode.Description),
 		),
@@ -247,16 +235,16 @@ func gameLayout() []g.Widget {
 		g.Align(g.AlignCenter).To(
 			g.Row(
 				g.Style().SetColor(g.StyleColorButton, activeMode.Color).To(
-					g.Button("CLICK ME").Size(170, 46).OnClick(click),
+					g.Button("CLICK ME").Size(170, 50).OnClick(click),
 				),
-				g.Button("RESTART").Size(120, 46).OnClick(restart),
+				g.Button("RESTART").Size(120, 50).OnClick(restart),
 			),
 		),
 		g.Dummy(0, 10),
 		g.Align(g.AlignCenter).To(
 			g.Row(
-				g.Button("RESET HIGHSCORE").Size(178, 32).OnClick(resetHighScore),
-				g.Button("BACK TO MENU").Size(178, 32).OnClick(func() {
+				g.Button("RESET HIGHSCORE").Size(178, 40).OnClick(resetHighScore),
+				g.Button("BACK TO MENU").Size(178, 40).OnClick(func() {
 					stopGame()
 					currentScreen = screenMenu
 				}),
@@ -264,7 +252,11 @@ func gameLayout() []g.Widget {
 		),
 		g.Dummy(0, 12),
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(15).To(g.Label("(c) 2020-2026 Soyab Nandhla    Version: " + appVersion)),
+			g.Row(
+				g.Label("(c) 2020-2026 Soyab Nandhla"),
+				g.Dummy(54, 0),
+				g.Label("Version: "+appVersion),
+			),
 		),
 	}
 }
@@ -277,8 +269,8 @@ func customControls() g.Widget {
 	return g.Align(g.AlignCenter).To(
 		g.Row(
 			g.Label("Custom seconds:"),
-			g.InputInt(&customSeconds).Label("##custom-seconds").Size(140),
-			g.Button("APPLY").Size(120, 32).OnClick(func() {
+			g.InputInt(&customSeconds).Label("##custom-seconds").Size(120),
+			g.Button("APPLY").Size(120, 40).OnClick(func() {
 				timeLeft = validateCustomSeconds(true)
 				if running {
 					timerEndsAt = time.Now().Add(time.Duration(timeLeft) * time.Second)
@@ -289,40 +281,11 @@ func customControls() g.Widget {
 	)
 }
 
-func creditsLayout() []g.Widget {
-	return []g.Widget{
-		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(24).To(g.Label("Credits")),
-		),
-		g.Dummy(0, 40),
-		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(18).To(g.Label("Developer: Soyab Nandhla")),
-		),
-		g.Dummy(0, 56),
-		g.Align(g.AlignCenter).To(
-			g.Row(
-				g.Button("RELEASES").Size(178, 32).OnClick(func() {
-					if err := openExternalURL(releasesURL); err != nil {
-						showModal("Open Error", err.Error())
-					}
-				}),
-				g.Button("BACK").Size(178, 32).OnClick(func() {
-					currentScreen = screenMenu
-				}),
-			),
-		),
-	}
-}
-
 func Tooltip(label string) g.Widget {
 	return g.Style().
 		SetStyle(g.StyleVarWindowPadding, 10, 8).
 		SetStyleFloat(g.StyleVarWindowRounding, 8).
 		To(g.Tooltip(label))
-}
-
-func openExternalURL(url string) error {
-	return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 }
 
 func startMode(mode gameMode) {

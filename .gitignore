@@ -1,11 +1,6 @@
-ClickerGame
-ClickerGameCli
-clicker-game
-clicker-game.exe
-ClickerGame-*
 *.exe
 *.syso
 *.tmp
 dist/
 build/
-test/
+*test.go
