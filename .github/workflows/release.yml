@@ -44,64 +44,64 @@ jobs:
           name: clicker-game-windows
           path: ClickerGame-${{ github.ref_name }}-windows.exe
 
-  build-macos:
-    runs-on: macos-13
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.25.0"
-
-      - name: Build macOS GUI
-        run: |
-          CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-macos .
-          mkdir -p ClickerGame.app/Contents/MacOS ClickerGame.app/Contents/Resources
-          cp ClickerGame-${{ github.ref_name }}-macos ClickerGame.app/Contents/MacOS/ClickerGame
-          cp macos/Info.plist ClickerGame.app/Contents/Info.plist
-          cp macos/icon.icns ClickerGame.app/Contents/Resources/icon.icns
-          zip -r "ClickerGame-${{ github.ref_name }}-macos.zip" ClickerGame.app
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: clicker-game-macos
-          path: ClickerGame-${{ github.ref_name }}-macos.zip
-
-  build-linux:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.25.0"
-
-      - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgl1-mesa-dev xorg-dev
-
-      - name: Build Linux GUI
-        run: |
-          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-linux .
-          tar -czf "ClickerGame-${{ github.ref_name }}-linux.tar.gz" ClickerGame-${{ github.ref_name }}-linux
-
-      - name: Upload Linux artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: clicker-game-linux
-          path: ClickerGame-${{ github.ref_name }}-linux.tar.gz
+  # build-macos:
+  #   runs-on: macos-13
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: "1.25.0"
+  #
+  #     - name: Build macOS GUI
+  #       run: |
+  #         CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-macos .
+  #         mkdir -p ClickerGame.app/Contents/MacOS ClickerGame.app/Contents/Resources
+  #         cp ClickerGame-${{ github.ref_name }}-macos ClickerGame.app/Contents/MacOS/ClickerGame
+  #         cp macos/Info.plist ClickerGame.app/Contents/Info.plist
+  #         cp macos/icon.icns ClickerGame.app/Contents/Resources/icon.icns
+  #         zip -r "ClickerGame-${{ github.ref_name }}-macos.zip" ClickerGame.app
+  #
+  #     - name: Upload macOS artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: clicker-game-macos
+  #         path: ClickerGame-${{ github.ref_name }}-macos.zip
+  #
+  # build-linux:
+  #   runs-on: ubuntu-latest
+  #
+  #   steps:
+  #     - name: Checkout code
+  #       uses: actions/checkout@v4
+  #
+  #     - name: Setup Go
+  #       uses: actions/setup-go@v4
+  #       with:
+  #         go-version: "1.25.0"
+  #
+  #     - name: Install Linux dependencies
+  #       run: |
+  #         sudo apt-get update
+  #         sudo apt-get install -y libgl1-mesa-dev xorg-dev
+  #
+  #     - name: Build Linux GUI
+  #       run: |
+  #         CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-linux .
+  #         tar -czf "ClickerGame-${{ github.ref_name }}-linux.tar.gz" ClickerGame-${{ github.ref_name }}-linux
+  #
+  #     - name: Upload Linux artifact
+  #       uses: actions/upload-artifact@v4
+  #       with:
+  #         name: clicker-game-linux
+  #         path: ClickerGame-${{ github.ref_name }}-linux.tar.gz
 
   release:
     runs-on: ubuntu-latest
-    needs: [build-windows, build-macos, build-linux]
+    needs: [build-windows]
 
     steps:
       - name: Download release artifacts

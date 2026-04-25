@@ -296,7 +296,7 @@ func customControls() g.Widget {
 	return g.Align(g.AlignCenter).To(
 		g.Row(
 			g.Label("Custom seconds:"),
-			g.InputInt("##custom-seconds", &customSeconds).Size(140),
+			g.InputInt(&customSeconds).Label("##custom-seconds").Size(140),
 			g.Button("APPLY").Size(120, 32).OnClick(func() {
 				timeLeft = validateCustomSeconds(true)
 			}),
