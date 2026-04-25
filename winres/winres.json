@@ -19,11 +19,12 @@
 			"0000": {
 				"info": {
 					"0409": {
-						"CompanyName": "Soayb Nandhla",
+						"CompanyName": "Soyab Nandhla",
+						"FileVersion": "3.0.0",
 						"FileDescription": "Clicker Game",
-						"LegalCopyright": "(c) 2024 Soayb Nandhla",
+						"LegalCopyright": "(c) 2024 Soyab Nandhla",
 						"ProductName": "Clicker Game",
-						"ProductVersion": "git-tag"
+						"ProductVersion": "3.0.0"
 					}
 				}
 			}

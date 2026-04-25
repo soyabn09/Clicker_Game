@@ -1,97 +1,87 @@
 # Clicker Game
 
-Standalone Go GUI version of Clicker Game. This directory contains everything needed for the app and does not depend on the older source folders.
+Clicker Game is a standalone Windows desktop game built with Go and GIU.
 
-## Run
+## Requirements
 
-Install Go, then run:
+Install these tools before building:
 
-```powershell
-go run .
+- [MSYS2](https://www.msys2.org/)
+- Go and GCC from the **MSYS2 MINGW64** environment
+- `go-winres` for embedding the Windows icon and version metadata
+
+Open **MSYS2 MINGW64** and install the required packages:
+
+```bash
+pacman -S --needed git mingw-w64-x86_64-go mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2
 ```
 
-The app checks GitHub releases on startup. If a newer release exists, it downloads and installs the update before the game menu is available.
+Install `go-winres`:
+
+```bash
+export GOROOT=/mingw64/lib/go
+export GOPATH=/mingw64
+
+go install github.com/tc-hib/go-winres@latest
+```
+
+## Run From Source
+
+From **MSYS2 MINGW64**, open the repository folder and run:
+
+```bash
+export GOROOT=/mingw64/lib/go
+export GOPATH=/mingw64
+
+CGO_ENABLED=1 go run -tags static .
+```
+
+## Build The Windows EXE
+
+From **MSYS2 MINGW64**, open the repository folder and run:
+
+```bash
+export GOROOT=/mingw64/lib/go
+export GOPATH=/mingw64
+
+go-winres make
+
+CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -v -tags static \
+  -ldflags "-s -w -H=windowsgui -extldflags=-static" \
+  -o "ClickerGame.exe" .
+```
+
+The built application will be created as:
+
+```text
+ClickerGame.exe
+```
+
+## Version Updates
+
+Before creating a release, update both places:
+
+- `appVersion` in `main.go`
+- `FileVersion` and `ProductVersion` in `winres/winres.json`
+
+Then rebuild `ClickerGame.exe` and upload it manually to your GitHub Releases page.
 
 ## Scores
 
-Scores are stored in:
+Scores are stored in the current Windows user's config directory:
 
 ```text
 %AppData%\Clicker Game\scores.json
 ```
 
-The first run migrates old scores from:
-
-```text
-C:\CLICKER\EASY.txt
-C:\CLICKER\MEDIUM.txt
-C:\CLICKER\HARD.txt
-C:\CLICKER\CUSTOM.txt
-```
-
 Set `CLICKER_DATA_DIR` to store `scores.json` somewhere else.
 
-## Updates
+## Windows Resources
 
-The updater checks:
-
-```text
-https://api.github.com/repos/soyabn09/Game/releases/latest
-```
-
-Release assets are named with the Git tag. For tag `v3.0.0`, the workflow publishes:
+Windows icon and metadata files live in:
 
 ```text
-ClickerGame-v3.0.0-windows.exe
-ClickerGame-v3.0.0-macos.zip
-ClickerGame-v3.0.0-linux.tar.gz
+winres/
 ```
 
-## Build with GitHub CI
-
-Builds are created only by the GitHub Actions release workflow. Do not build release files locally.
-
-1. Commit and push all release-ready changes to GitHub.
-2. Create a new version tag using the `vX.Y.Z` format:
-
-   ```powershell
-   git tag v3.0.0
-   ```
-
-   For a prerelease build, include a suffix after the version:
-
-   ```powershell
-   git tag v3.0.0-beta.1
-   ```
-
-   Tags containing `-` are published as GitHub prereleases.
-
-3. Push the tag to GitHub:
-
-   ```powershell
-   git push origin v3.0.0
-   ```
-
-   For a prerelease tag:
-
-   ```powershell
-   git push origin v3.0.0-beta.1
-   ```
-
-4. Open the repository on GitHub and go to **Actions**.
-5. Wait for the **Release** workflow to finish. It builds Windows, macOS, and Linux packages.
-6. Go to **Releases** and confirm the new release contains the generated assets:
-
-   ```text
-   ClickerGame-v3.0.0-windows.exe
-   ClickerGame-v3.0.0-macos.zip
-   ClickerGame-v3.0.0-linux.tar.gz
-   ```
-
-   Prerelease builds use the prerelease tag in the asset names:
-
-   ```text
-   ClickerGame-v3.1.0-beta.1-windows.exe
-   ClickerGame-v3.1.0-beta.1-macos.zip
-   ClickerGame-v3.1.0-beta.1-linux.tar.gz
-   ```
+Run `go-winres make` again after changing `winres/winres.json` or replacing the icon.

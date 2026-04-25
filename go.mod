@@ -1,4 +1,4 @@
-module github.com/soyabn09/Game
+module github.com/soyabn09/Clicker_Game
 
 go 1.25.0
 

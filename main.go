@@ -8,17 +8,20 @@ import (
 	"image/color"
 	_ "image/png"
 	"os/exec"
-	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	g "github.com/AllenDang/giu"
 )
 
-var appVersion = "v3.0.0"
+var appVersion = "3.0.0"
 
-const releasesURL = "https://github.com/soyabn09/Game/releases"
+const releasesURL = "https://github.com/soyabn09/Clicker_Game/releases"
+
+const (
+	windowWidth  = 430
+	windowHeight = 330
+)
 
 //go:embed winres/icon.png
 var iconBytes []byte
@@ -39,63 +42,11 @@ type gameMode struct {
 	Color       color.RGBA
 }
 
-func updaterLayout() []g.Widget {
-	status := updaterSnapshot()
-
-	title := "Checking for updates"
-	switch status.State {
-	case updateRequired:
-		title = "Update required"
-	case updateDownloading:
-		title = "Downloading update"
-	case updateRestarting:
-		title = "Installing update"
-	case updateFailed:
-		title = "Update check failed"
-	}
-
-	widgets := []g.Widget{
-		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(40).To(g.Label("Clicker Game")),
-		),
-		g.Dummy(0, 35),
-		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(28).To(g.Label(title)),
-		),
-		g.Dummy(0, 15),
-		g.Align(g.AlignCenter).To(
-			g.Label(status.Message),
-		),
-	}
-
-	if status.Latest != "" {
-		widgets = append(widgets,
-			g.Dummy(0, 10),
-			g.Align(g.AlignCenter).To(
-				g.Label("Current: "+appVersion+"    Latest: "+status.Latest),
-			),
-		)
-	}
-
-	if status.State == updateFailed {
-		widgets = append(widgets,
-			g.Dummy(0, 25),
-			g.Align(g.AlignCenter).To(
-				g.Button("Retry").Size(180, 45).OnClick(func() {
-					go checkForUpdates()
-				}),
-			),
-		)
-	}
-
-	return widgets
-}
-
 var (
-	green  = color.RGBA{R: 0x2D, G: 0x7C, B: 0x46, A: 0xFF}
-	yellow = color.RGBA{R: 0xFE, G: 0xE7, B: 0x5C, A: 0xFF}
-	red    = color.RGBA{R: 0xEC, G: 0x41, B: 0x44, A: 0xFF}
-	blue   = color.RGBA{R: 0x58, G: 0x65, B: 0xF2, A: 0xFF}
+	green  = color.RGBA{R: 0x16, G: 0x5C, B: 0x32, A: 0xFF}
+	yellow = color.RGBA{R: 0xB8, G: 0x92, B: 0x12, A: 0xFF}
+	red    = color.RGBA{R: 0xA8, G: 0x1F, B: 0x24, A: 0xFF}
+	blue   = color.RGBA{R: 0x25, G: 0x38, B: 0xA8, A: 0xFF}
 
 	modes = map[string]gameMode{
 		"easy": {
@@ -138,6 +89,7 @@ var (
 	lastTick      time.Time
 
 	modalID      int
+	modalOpen    bool
 	modalTitle   string
 	modalMessage string
 )
@@ -146,9 +98,8 @@ func main() {
 	if err := loadScores(); err != nil {
 		fmt.Println("Failed to create score directory:", err)
 	}
-	go checkForUpdates()
 
-	win := g.NewMasterWindow("Clicker Game", 1200, 800, 0)
+	win := g.NewMasterWindow("How fast can you click?", windowWidth, windowHeight, g.MasterWindowFlagsNotResizable)
 	if icon, _, err := image.Decode(bytes.NewReader(iconBytes)); err == nil {
 		win.SetIcon([]image.Image{icon})
 	}
@@ -159,38 +110,43 @@ func loop() {
 	updateTimer()
 
 	widgets := layoutForScreen()
-	if modalID > 0 {
-		g.OpenPopup("#modal" + strconv.Itoa(modalID))
-	}
 	widgets = append(widgets, modal())
 
-	g.PushWindowPadding(48, 48)
+	g.PushWindowPadding(16, 22)
 	g.SingleWindow().Layout(widgets...)
 	g.PopStyle()
 }
 
 func modal() g.Widget {
-	return g.PopupModal("#modal" + strconv.Itoa(modalID)).
-		Flags(g.WindowFlagsAlwaysAutoResize).
-		Layout(
-			g.Align(g.AlignCenter).To(
-				g.Style().SetFontSize(30).To(g.Label(modalTitle)),
-				g.Dummy(0, 10),
-				g.Style().SetFontSize(20).To(g.Label(modalMessage)),
-				g.Dummy(0, 15),
-				g.Button("OK").Size(180, 32).OnClick(func() {
-					g.CloseCurrentPopup()
-					modalID = 0
-				}),
-			),
-		)
+	return g.Custom(func() {
+		if modalID <= 0 {
+			return
+		}
+
+		name := modalTitle + "##modal"
+		if modalOpen {
+			g.OpenPopup(name)
+			modalOpen = false
+		}
+
+		g.SetNextWindowSize(300, 0)
+		g.PopupModal(name).
+			Layout(
+				g.Dummy(0, 4),
+				g.Label(modalMessage).Wrapped(true),
+				g.Dummy(0, 12),
+				g.Align(g.AlignCenter).To(
+					g.Button("OK").Size(120, 28).OnClick(func() {
+						g.CloseCurrentPopup()
+						modalID = 0
+						modalOpen = false
+					}),
+				),
+			).Build()
+	})
 }
 
 func layoutForScreen() []g.Widget {
-	if !canUseGame() {
-		return updaterLayout()
-	}
-
 	switch currentScreen {
 	case screenGame:
 		return gameLayout()
@@ -204,30 +160,37 @@ func layoutForScreen() []g.Widget {
 func menuLayout() []g.Widget {
 	return []g.Widget{
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(40).To(g.Label("Clicker Game")),
+			g.Style().SetFontSize(18).To(g.Label("MAIN MENU")),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 24),
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(30).To(g.Label("Please select a difficulty:")),
+			modeButton(modes["easy"], "Easy Difficulty"),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 8),
 		g.Align(g.AlignCenter).To(
-			g.Row(
-				modeButton(modes["easy"], "Easy Difficulty"),
-				modeButton(modes["medium"], "Medium Difficulty"),
-				modeButton(modes["hard"], "Hard Difficulty"),
-				modeButton(modes["custom"], "Custom Option"),
-			),
+			modeButton(modes["medium"], "Medium Difficulty"),
 		),
-		g.Dummy(0, 30),
+		g.Dummy(0, 8),
 		g.Align(g.AlignCenter).To(
-			g.Button("Credits").Size(220, 40).OnClick(func() {
+			modeButton(modes["hard"], "Hard Difficulty"),
+		),
+		g.Dummy(0, 8),
+		g.Align(g.AlignCenter).To(
+			modeButton(modes["custom"], "Custom Option"),
+		),
+		g.Dummy(0, 8),
+		g.Align(g.AlignCenter).To(
+			g.Button("CREDITS").Size(383, 28).OnClick(func() {
 				currentScreen = screenCredits
 			}),
 		),
-		g.Dummy(0, 30),
+		g.Dummy(0, 12),
 		g.Align(g.AlignCenter).To(
-			g.Label("Version: " + appVersion),
+			g.Row(
+				g.Label("(c) 2020 - 2026 Soyab Nandhla"),
+				g.Dummy(54, 0),
+				g.Label("Version: "+appVersion),
+			),
 		),
 	}
 }
@@ -236,9 +199,9 @@ func modeButton(mode gameMode, tooltip string) g.Widget {
 	return g.Style().
 		SetColor(g.StyleColorButton, mode.Color).
 		To(
-			g.Button(strings.Title(strings.ToLower(mode.Name))).
+			g.Button(mode.Name).
 				OnClick(func() { startMode(mode) }).
-				Size(190, 60),
+				Size(383, 28),
 			Tooltip(tooltip),
 		)
 }
@@ -246,44 +209,46 @@ func modeButton(mode gameMode, tooltip string) g.Widget {
 func gameLayout() []g.Widget {
 	return []g.Widget{
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(40).To(g.Label(activeMode.Name)),
+			g.Style().SetFontSize(24).To(g.Label(activeMode.Name)),
 		),
-		g.Dummy(0, 20),
-		g.Row(
-			g.Style().SetFontSize(28).To(g.Label("Score: "+strconv.Itoa(int(score)))),
-			g.Dummy(60, 0),
-			g.Style().SetFontSize(28).To(g.Label("High Score: "+strconv.Itoa(int(highScore)))),
-			g.Dummy(60, 0),
-			g.Style().SetFontSize(28).To(g.Label("Time: "+strconv.Itoa(int(timeLeft)))),
+		g.Dummy(0, 10),
+		g.Align(g.AlignCenter).To(
+			g.Row(
+				g.Style().SetFontSize(16).To(g.Label("Score: "+strconv.Itoa(int(score)))),
+				g.Dummy(18, 0),
+				g.Style().SetFontSize(16).To(g.Label("High Score: "+strconv.Itoa(int(highScore)))),
+				g.Dummy(18, 0),
+				g.Style().SetFontSize(16).To(g.Label("Time: "+strconv.Itoa(int(timeLeft)))),
+			),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 10),
 		g.Align(g.AlignCenter).To(
 			g.Label(activeMode.Description),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 10),
 		customControls(),
-		g.Dummy(0, 15),
+		g.Dummy(0, 10),
 		g.Align(g.AlignCenter).To(
 			g.Row(
 				g.Style().SetColor(g.StyleColorButton, activeMode.Color).To(
-					g.Button("CLICK ME").Size(240, 70).OnClick(click),
+					g.Button("CLICK ME").Size(170, 46).OnClick(click),
 				),
-				g.Button("RESTART").Size(180, 70).OnClick(restart),
+				g.Button("RESTART").Size(120, 46).OnClick(restart),
 			),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 10),
 		g.Align(g.AlignCenter).To(
 			g.Row(
-				g.Button("RESET HIGHSCORE").Size(220, 45).OnClick(resetHighScore),
-				g.Button("BACK TO MENU").Size(220, 45).OnClick(func() {
+				g.Button("RESET HIGHSCORE").Size(178, 32).OnClick(resetHighScore),
+				g.Button("BACK TO MENU").Size(178, 32).OnClick(func() {
 					stopGame()
 					currentScreen = screenMenu
 				}),
 			),
 		),
-		g.Dummy(0, 30),
+		g.Dummy(0, 12),
 		g.Align(g.AlignCenter).To(
-			g.Label("(c) 2020-2026 Soayb Nandhla    Version: " + appVersion),
+			g.Style().SetFontSize(15).To(g.Label("(c) 2020-2026 Soyab Nandhla    Version: " + appVersion)),
 		),
 	}
 }
@@ -299,6 +264,7 @@ func customControls() g.Widget {
 			g.InputInt(&customSeconds).Label("##custom-seconds").Size(140),
 			g.Button("APPLY").Size(120, 32).OnClick(func() {
 				timeLeft = validateCustomSeconds(true)
+				highScore = int32(getHighScore(scoreKey()))
 			}),
 		),
 	)
@@ -307,21 +273,21 @@ func customControls() g.Widget {
 func creditsLayout() []g.Widget {
 	return []g.Widget{
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(40).To(g.Label("Credits")),
+			g.Style().SetFontSize(24).To(g.Label("Credits")),
 		),
-		g.Dummy(0, 20),
+		g.Dummy(0, 40),
 		g.Align(g.AlignCenter).To(
-			g.Style().SetFontSize(22).To(g.Label("Developer: Soayb Nandhla")),
+			g.Style().SetFontSize(18).To(g.Label("Developer: Soyab Nandhla")),
 		),
-		g.Dummy(0, 25),
+		g.Dummy(0, 56),
 		g.Align(g.AlignCenter).To(
 			g.Row(
-				g.Button("RELEASES").Size(180, 45).OnClick(func() {
+				g.Button("RELEASES").Size(178, 32).OnClick(func() {
 					if err := openExternalURL(releasesURL); err != nil {
 						showModal("Open Error", err.Error())
 					}
 				}),
-				g.Button("BACK").Size(180, 45).OnClick(func() {
+				g.Button("BACK").Size(178, 32).OnClick(func() {
 					currentScreen = screenMenu
 				}),
 			),
@@ -337,16 +303,7 @@ func Tooltip(label string) g.Widget {
 }
 
 func openExternalURL(url string) error {
-	var cmd *exec.Cmd
-	switch runtime.GOOS {
-	case "windows":
-		cmd = exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	case "darwin":
-		cmd = exec.Command("open", url)
-	default:
-		cmd = exec.Command("xdg-open", url)
-	}
-	return cmd.Start()
+	return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 }
 
 func startMode(mode gameMode) {
@@ -358,7 +315,7 @@ func startMode(mode gameMode) {
 	} else {
 		timeLeft = mode.Seconds
 	}
-	highScore = int32(getHighScore(mode.ID))
+	highScore = int32(getHighScore(scoreKey()))
 	currentScreen = screenGame
 }
 
@@ -381,11 +338,12 @@ func restart() {
 	} else {
 		timeLeft = activeMode.Seconds
 	}
+	highScore = int32(getHighScore(scoreKey()))
 }
 
 func resetHighScore() {
 	highScore = 0
-	if err := setHighScore(activeMode.ID, 0); err != nil {
+	if err := setHighScore(scoreKey(), 0); err != nil {
 		showModal("Save Error", err.Error())
 	}
 }
@@ -409,7 +367,7 @@ func finishGame() {
 	running = false
 	if score > highScore {
 		highScore = score
-		if err := setHighScore(activeMode.ID, int(score)); err != nil {
+		if err := setHighScore(scoreKey(), int(score)); err != nil {
 			showModal("Save Error", err.Error())
 			return
 		}
@@ -441,8 +399,16 @@ func validateCustomSeconds(alert bool) int32 {
 	return customSeconds
 }
 
+func scoreKey() string {
+	if activeMode.ID != "custom" {
+		return activeMode.ID
+	}
+	return "custom:" + strconv.Itoa(int(validateCustomSeconds(false)))
+}
+
 func showModal(title, message string) {
 	modalID++
+	modalOpen = true
 	modalTitle = title
 	modalMessage = message
 }

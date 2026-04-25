@@ -12,14 +12,14 @@ import (
 )
 
 type scoreStore struct {
-	Version    int            `json:"version"`
+	Version   int            `json:"version"`
 	HighScore map[string]int `json:"high_scores"`
 }
 
 var (
 	scoresMu sync.Mutex
 	scores   = scoreStore{
-		Version:    1,
+		Version:   1,
 		HighScore: map[string]int{"easy": 0, "medium": 0, "hard": 0, "custom": 0},
 	}
 )
@@ -113,8 +113,15 @@ func saveScoresLocked() error {
 func migrateOldScoresLocked() {
 	for _, modeID := range []string{"easy", "medium", "hard", "custom"} {
 		score, ok := readOldScore(modeID)
-		if ok && score > scores.HighScore[modeID] {
-			scores.HighScore[modeID] = score
+		if !ok {
+			continue
+		}
+		key := modeID
+		if modeID == "custom" {
+			key = "custom:60"
+		}
+		if score > scores.HighScore[key] {
+			scores.HighScore[key] = score
 		}
 	}
 }
