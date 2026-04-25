@@ -58,10 +58,24 @@ Builds are created only by the GitHub Actions release workflow. Do not build rel
    git tag v3.0.0
    ```
 
+   For a prerelease build, include a suffix after the version:
+
+   ```powershell
+   git tag v3.1.0-beta.1
+   ```
+
+   Tags containing `-` are published as GitHub prereleases.
+
 3. Push the tag to GitHub:
 
    ```powershell
    git push origin v3.0.0
+   ```
+
+   For a prerelease tag:
+
+   ```powershell
+   git push origin v3.1.0-beta.1
    ```
 
 4. Open the repository on GitHub and go to **Actions**.
@@ -72,4 +86,12 @@ Builds are created only by the GitHub Actions release workflow. Do not build rel
    ClickerGame-v3.0.0-windows.exe
    ClickerGame-v3.0.0-macos.zip
    ClickerGame-v3.0.0-linux.tar.gz
+   ```
+
+   Prerelease builds use the prerelease tag in the asset names:
+
+   ```text
+   ClickerGame-v3.1.0-beta.1-windows.exe
+   ClickerGame-v3.1.0-beta.1-macos.zip
+   ClickerGame-v3.1.0-beta.1-linux.tar.gz
    ```
