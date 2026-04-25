@@ -7,7 +7,7 @@
 	"RT_MANIFEST": {
 		"#1": {
 			"0409": {
-				"description": "Clicker Game Version 3.0",
+				"description": "Clicker Game",
 				"minimum-os": "win10",
 				"execution-level": "as invoker",
 				"dpi-awareness": "system"
@@ -19,11 +19,11 @@
 			"0000": {
 				"info": {
 					"0409": {
-						"CompanyName": "Soyab Nandhla",
-						"FileDescription": "Clicker Game Version 3.0",
-						"LegalCopyright": "© 2024 Soyab Nandhla",
+						"CompanyName": "Soayb Nandhla",
+						"FileDescription": "Clicker Game",
+						"LegalCopyright": "(c) 2024 Soayb Nandhla",
 						"ProductName": "Clicker Game",
-						"ProductVersion": "3.0.0"
+						"ProductVersion": "git-tag"
 					}
 				}
 			}

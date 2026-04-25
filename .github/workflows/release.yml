@@ -1,33 +1,22 @@
 name: Release
+
 on:
   push:
     tags:
       - v*
-
-env:
-  FORCE_COLOR: true
 
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: "1.19"
-
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/cache@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          path: |
-            ~\AppData\Local\go-build
-            ~\go\pkg\mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version: "1.19"
 
       - name: Setup MSYS2
         uses: msys2/setup-msys2@v2
@@ -38,50 +27,105 @@ jobs:
           pacman -S --noconfirm git mingw-w64-x86_64-gcc mingw-w64-x86_64-SDL2 mingw-w64-x86_64-go
           export GOROOT=/mingw64/lib/go
           export GOPATH=/mingw64
-
-      - name: Install Go dependencies
-        shell: msys2 {0}
-        run: |
-          export GOROOT=/mingw64/lib/go
-          export GOPATH=/mingw64
-          go get -v
           go install github.com/tc-hib/go-winres@latest
 
-      - name: Build Gui
+      - name: Build Windows GUI
         shell: msys2 {0}
         run: |
           export GOROOT=/mingw64/lib/go
           export GOPATH=/mingw64
-          go-winres make --product-version "git-tag"
-          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -v -tags static -ldflags "-s -w -H=windowsgui -extldflags=-static -X 'main.InstallerGitHash=$(git rev-parse --short HEAD)' -X 'main.InstallerTag=${{ github.ref_name }}'" -o ClickerGame.exe
+          VERSION="${GITHUB_REF_NAME#v}"
+          go-winres make --product-version "$VERSION"
+          CGO_ENABLED=1 GOOS=windows GOARCH=amd64 go build -v -tags static -ldflags "-s -w -H=windowsgui -extldflags=-static -X 'main.appVersion=${{ github.ref_name }}'" -o "ClickerGame-${{ github.ref_name }}-windows.exe" .
 
-      - name: Upload artifact
+      - name: Upload Windows artifact
         uses: actions/upload-artifact@v3
         with:
-          name: ClickerGame-windows
-          path: |
-            ClickerGame.exe
+          name: clicker-game-windows
+          path: ClickerGame-${{ github.ref_name }}-windows.exe
 
-  release:
-    runs-on: ubuntu-latest
-    needs: [build-windows]
+  build-macos:
+    runs-on: macos-13
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - uses: actions/download-artifact@v3
+      - name: Setup Go
+        uses: actions/setup-go@v4
         with:
-          name: ClickerGame-windows
-          path: windows
+          go-version: "1.19"
 
-      - name: Create the release
-        uses: softprops/action-gh-release@v0.1.15 # v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build macOS GUI
+        run: |
+          CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-macos .
+          mkdir -p ClickerGame.app/Contents/MacOS ClickerGame.app/Contents/Resources
+          cp ClickerGame-${{ github.ref_name }}-macos ClickerGame.app/Contents/MacOS/ClickerGame
+          cp macos/Info.plist ClickerGame.app/Contents/Info.plist
+          cp macos/icon.icns ClickerGame.app/Contents/Resources/icon.icns
+          zip -r "ClickerGame-${{ github.ref_name }}-macos.zip" ClickerGame.app
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: clicker-game-macos
+          path: ClickerGame-${{ github.ref_name }}-macos.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: "1.19"
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-dev xorg-dev
+
+      - name: Build Linux GUI
+        run: |
+          CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -v -ldflags "-s -w -X 'main.appVersion=${{ github.ref_name }}'" -o ClickerGame-${{ github.ref_name }}-linux .
+          tar -czf "ClickerGame-${{ github.ref_name }}-linux.tar.gz" ClickerGame-${{ github.ref_name }}-linux
+
+      - name: Upload Linux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: clicker-game-linux
+          path: ClickerGame-${{ github.ref_name }}-linux.tar.gz
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [build-windows, build-macos, build-linux]
+
+    steps:
+      - name: Download Windows artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: clicker-game-windows
+          path: dist
+
+      - name: Download macOS artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: clicker-game-macos
+          path: dist
+
+      - name: Download Linux artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: clicker-game-linux
+          path: dist
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v1
         with:
           name: ${{ github.ref_name }}
-          prerelease: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
           draft: false
-          files: |
-            windows/ClickerGame*.exe
+          files: dist/*
